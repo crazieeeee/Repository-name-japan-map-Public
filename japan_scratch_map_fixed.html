@@ -124,7 +124,7 @@ body{
   letter-spacing:0;
   overflow-x:hidden;
 }
-header,.container,.overlay,.tip{position:relative;z-index:1}
+header,.container,.tip{position:relative;z-index:1}
 .decor-layer{
   position:fixed;
   inset:0;
@@ -294,11 +294,25 @@ h1{
   font-weight:650;
 }
 .cloud-user,.cloud-hint{font-weight:500}
-.overlay{background:rgba(245,245,247,.56);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.overlay{
+  position:fixed;
+  inset:0;
+  z-index:1000;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:rgba(245,245,247,.56);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+.overlay.on{display:flex}
 .modal{
   border:1px solid var(--hairline);
   border-radius:26px;
   padding:26px;
+  width:min(92vw,480px);
+  max-height:min(90vh,720px);
+  overflow-y:auto;
   box-shadow:0 32px 90px rgba(29,29,31,.18);
 }
 .mtitle{
