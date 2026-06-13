@@ -840,6 +840,39 @@ function currentMapRef(){
   if(activeGroup)return doc(db,"groups",activeGroup,"maps","shared");
   return doc(db,"users",currentUser.uid,"maps","personal");
 }
+function uniqueItems(items){
+  const seen=new Set();
+  return items.filter(item=>{
+    const key=typeof item==="string"?item:JSON.stringify(item);
+    if(seen.has(key))return false;
+    seen.add(key);
+    return true;
+  });
+}
+function mergeEntry(remoteEntry={},localEntry={}){
+  const remoteTime=remoteEntry.visitedAt?Date.parse(remoteEntry.visitedAt):0;
+  const localTime=localEntry.visitedAt?Date.parse(localEntry.visitedAt):0;
+  const newer=localTime>remoteTime?localEntry:remoteEntry;
+  const older=localTime>remoteTime?remoteEntry:localEntry;
+  return {
+    ...older,
+    ...newer,
+    visited:!!(remoteEntry.visited||localEntry.visited),
+    note:newer.note||older.note||"",
+    photos:uniqueItems([...(remoteEntry.photos||[]),...(localEntry.photos||[])]),
+    places:uniqueItems([...(remoteEntry.places||[]),...(localEntry.places||[])]),
+    visitedAt:newer.visitedAt||older.visitedAt||new Date().toISOString()
+  };
+}
+function mergeMapData(remoteData={},localData={}){
+  const merged={};
+  const ids=new Set([...Object.keys(remoteData||{}),...Object.keys(localData||{})]);
+  ids.forEach(id=>{merged[id]=mergeEntry(remoteData[id],localData[id]);});
+  return merged;
+}
+function sameData(a,b){
+  return JSON.stringify(a||{})===JSON.stringify(b||{});
+}
 async function pushCloud(nextData){
   if(!configured||!currentUser||applyingRemote)return;
   const payload={
@@ -871,9 +904,13 @@ function listenToMap(){
     :"未加入共享群組，現在儲存在你的個人帳戶。";
   unsub=onSnapshot(currentMapRef(),snap=>{
     if(snap.exists()){
+      const remoteData=snap.data().data||{};
+      const localData=window.JSM_APP.getMapData();
+      const mergedData=mergeMapData(remoteData,localData);
       applyingRemote=true;
-      window.JSM_APP.setMapData(snap.data().data||{});
+      window.JSM_APP.setMapData(mergedData);
       applyingRemote=false;
+      if(!sameData(remoteData,mergedData))pushCloud(mergedData);
       setStatus(activeGroup?"共享群組已同步":"帳戶已同步");
     }else{
       pushCloud(window.JSM_APP.getMapData());
